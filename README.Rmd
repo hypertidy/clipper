@@ -1,0 +1,76 @@
+---
+title: "clipper"
+output:
+  rmarkdown::html_vignette:
+    self_contained: no
+
+  md_document:
+    variant: markdown_github
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r opts, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  warning = TRUE,
+  message = TRUE,
+  width = 120,
+  comment = "#>",
+  fig.retina = 2,
+  fig.path = "README-"
+)
+```
+
+[![Build Status](https://travis-ci.org/hypertidy/clipper.svg)](https://travis-ci.org/hypertidy/clipper) 
+[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/hypertidy/clipper?branch=master&svg=true)](https://ci.appveyor.com/project/hypertidy/clipper)
+[![codecov](https://codecov.io/gh/hypertidy/clipper/branch/master/graph/badge.svg)](https://codecov.io/gh/hypertidy/clipper)
+[![Project Status: Concept](http://www.repostatus.org/badges/latest/concept.svg)](http://www.repostatus.org/#concept)
+
+# clipper: Another Port of Angus Johnson's ['clipper' Polygon Clipping Library](http://angusj.com/delphi/clipper.php)
+
+A few scribbles extending beyond CRAN package
+[`polyclip`](https://cran.r-project.org/package=polyclip)
+to use `clipper` for a few commonly used manipulations. Package has two sets of
+internal data to play with:
+
+1. `castlemaine` - An `SC` representation of the street network of Castlemaine,
+   Australia.
+2. `castlemaine_green` - An `sf::sfc` object containing all the polygons of
+   green areas (parks, paddocks, lawns, forests) in eponymous location.
+
+## Lengths of Paths throught Polygons
+
+The `castlemaine` data set can be used to generate paths via `dodgr`, and the
+currently sole demo function can then take the polygon layer and determine the
+relative length of the path that passes through the polygons. Preliminary
+pre-processing, creating the `dodgr` street network, and extracting the
+vertices to be used to generate a random path.
+
+```{r streetnet}
+devtools::load_all (".", export_all = FALSE)
+streetnet <- dodgr::weight_streetnet (castlemaine, wt_profile = "foot")
+v <- dodgr::dodgr_vertices (streetnet)
+v0 <- sample (v$id, size = 1)
+v1 <- sample (v$id, size = 1)
+p <- dodgr::dodgr_paths (streetnet, from = v0, to = v1)
+p <- v [match (p [[1]] [[1]], v$id), ]
+head (p)
+```
+We then just need to extract the coordinates of the polygon layer, and ensure
+that the columns are labelled `x` and `y`:
+```{r green}
+green_polys <- castlemaine_green
+green <- lapply (green_polys$geometry, function (i) {
+                     res <- i [[1]]
+                     colnames (res) <- c ("x", "y")
+                     return (res)   })
+length (green)
+head (green [[1]])
+```
+Then we're good to go ...
+```{r path_through_poly}
+path_through_poly (p, green)
+```
+And `r formatC (path_through_poly (g, green) * 100, format = "f", digits = 1)`%
+of that path passes through the green polygons.
