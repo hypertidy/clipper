@@ -2,6 +2,7 @@
 
 export("%>%")
 export(path_through_poly)
+export(poly_area)
 importFrom(Rcpp,evalCpp)
 importFrom(magrittr,"%>%")
 useDynLib(clipper, .registration = TRUE)

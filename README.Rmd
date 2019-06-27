@@ -39,7 +39,57 @@ internal data to play with:
 2. `castlemaine_green` - An `sf::sfc` object containing all the polygons of
    green areas (parks, paddocks, lawns, forests) in eponymous location.
 
-## Lengths of Paths throught Polygons
+```{r load}
+devtools::load_all (".", export_all = FALSE)
+```
+
+## Polygon Areas
+
+The `clipper` package offers an alternative way to *approximately* calculate
+the areas of polygons expressed in lat-lon values. The following code
+demonstrates with the above polygon data, and compares the result with
+equivalent areas calculated via `sf`.
+
+
+```{r areas}
+# extract coordinates from sf polygon objects:
+polys <- lapply (castlemaine_green$geometry, function (i) i [[1]])
+a <- poly_area (polys)
+a0 <- as.numeric (sf::st_area (castlemaine_green))
+mean ((a - a0) / a0)
+```
+
+
+The areas generally underestimate the actual values by about 1.5%. The
+benchmark's aren't good either:
+```{r benchmark1}
+rbenchmark::benchmark (a <- poly_area (polys),
+                       a0 <- sf::st_area (castlemaine_green),
+                       replications = 10)
+```
+
+But the point of this function is when inputs are pure lon-lat coordinates,
+*not* in `sf` format, in which case the benchmarks look a little different.
+
+```{r benchmark2}
+poly_area_sf <- function (p)
+{
+     sf::st_polygon (list (p)) %>%
+         sf::st_sfc (crs = 4326) %>%
+         sf::st_area () %>%
+         as.numeric ()
+}
+
+rbenchmark::benchmark (a <- poly_area (polys),
+                       a0 <- unlist (lapply (polys, poly_area_sf)),
+                       replications = 10)
+```
+
+
+
+
+
+## Lengths of Paths through Polygons
 
 The `castlemaine` data set can be used to generate paths via `dodgr`, and the
 currently sole demo function can then take the polygon layer and determine the
@@ -48,7 +98,6 @@ pre-processing, creating the `dodgr` street network, and extracting the
 vertices to be used to generate a random path.
 
 ```{r streetnet}
-devtools::load_all (".", export_all = FALSE)
 streetnet <- dodgr::weight_streetnet (castlemaine, wt_profile = "foot")
 v <- dodgr::dodgr_vertices (streetnet)
 v0 <- sample (v$id, size = 1)
@@ -60,8 +109,7 @@ head (p)
 We then just need to extract the coordinates of the polygon layer, and ensure
 that the columns are labelled `x` and `y`:
 ```{r green}
-green_polys <- castlemaine_green
-green <- lapply (green_polys$geometry, function (i) {
+green <- lapply (castlemaine_green$geometry, function (i) {
                      res <- i [[1]]
                      colnames (res) <- c ("x", "y")
                      return (res)   })
@@ -72,5 +120,5 @@ Then we're good to go ...
 ```{r path_through_poly}
 path_through_poly (p, green)
 ```
-And `r formatC (path_through_poly (g, green) * 100, format = "f", digits = 1)`%
+And `r formatC (path_through_poly (p, green) * 100, format = "f", digits = 1)`%
 of that path passes through the green polygons.

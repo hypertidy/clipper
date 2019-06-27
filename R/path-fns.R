@@ -10,5 +10,5 @@
 #' @export
 path_through_poly <- function (path, polys)
 {
-    rcpp_path_in_poly (green, p)
+    rcpp_path_in_poly (green, path)
 }

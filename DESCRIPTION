@@ -9,6 +9,8 @@ Description: Another Port of Angus Johnson's 'clipper' Polygon Clipping Library.
 License: GPL-3
 Depends: R (>= 2.10)
 Imports:
+    geodist,
+    magrittr,
     Rcpp (>= 0.12.6)
 Suggests:
     testthat
